@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INO-VR – Agent Prospection Suisse</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f3;
+      --bg3: #eeede9;
+      --text: #1a1a18;
+      --text2: #6b6b67;
+      --text3: #9e9e99;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --font: 'Inter', system-ui, sans-serif;
+      --green: #3da06e;
+      --blue-bg: #E6F1FB; --blue-text: #0C447C;
+      --green-bg: #EAF3DE; --green-text: #3B6D11;
+      --amber-bg: #FAEEDA; --amber-text: #854F0B;
+      --red-bg: #FCEBEB; --red-text: #A32D2D;
+      --teal-bg: #E1F5EE; --teal-text: #0F6E56;
+      --gray-bg: #f0efeb; --gray-text: #5F5E5A;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a18; --bg2: #242422; --bg3: #2e2e2c;
+        --text: #f0efeb; --text2: #a0a09b; --text3: #6b6b67;
+        --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+        --blue-bg: #042C53; --blue-text: #B5D4F4;
+        --green-bg: #173404; --green-text: #C0DD97;
+        --amber-bg: #412402; --amber-text: #FAC775;
+        --red-bg: #501313; --red-text: #F7C1C1;
+        --teal-bg: #04342C; --teal-text: #9FE1CB;
+        --gray-bg: #2C2C2A; --gray-text: #B4B2A9;
+      }
+    }
+    body { font-family: var(--font); background: var(--bg3); color: var(--text); min-height: 100vh; }
+    .page { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo { width: 36px; height: 36px; background: var(--text); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; }
+    .brand-logo svg { width: 20px; height: 20px; fill: var(--bg); }
+    .brand-name { font-size: 15px; font-weight: 600; color: var(--text); }
+    .brand-sub { font-size: 12px; color: var(--text2); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .topbar-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .g4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .mcard { background: var(--bg2); border-radius: var(--radius); padding: 14px 16px; }
+    .mcard .ml { font-size: 12px; color: var(--text2); margin-bottom: 3px; }
+    .mcard .mv { font-size: 24px; font-weight: 600; color: var(--text); }
+    .mcard .ms { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
+    .tab { padding: 10px 18px; font-size: 13px; cursor: pointer; border: none; background: transparent; color: var(--text2); border-bottom: 2px solid transparent; white-space: nowrap; font-family: var(--font); transition: color .15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+    .sec { display: none; } .sec.active { display: block; }
+    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 14px; }
+    label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 4px; margin-top: 10px; }
+    label:first-child { margin-top: 0; }
+    select, input[type=text], input[type=email], textarea {
+      width: 100%; padding: 9px 12px; font-size: 13px; font-family: var(--font);
+      border: 0.5px solid var(--border); border-radius: var(--radius);
+      background: var(--bg); color: var(--text); outline: none; transition: border-color .15s;
+    }
+    select:focus, input:focus, textarea:focus { border-color: var(--border2); }
+    textarea { resize: vertical; min-height: 70px; }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .fr { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+    button { font-family: var(--font); cursor: pointer; border-radius: var(--radius); font-size: 13px; padding: 8px 16px; border: 0.5px solid var(--border2); background: transparent; color: var(--text); transition: background .15s; }
+    button:hover { background: var(--bg2); }
+    button.primary { background: var(--text); color: var(--bg); border: none; font-weight: 500; }
+    button.primary:hover { opacity: .85; }
+    button.sm { font-size: 11px; padding: 4px 10px; }
+    .badge { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 99px; font-weight: 500; }
+    .b-blue { background: var(--blue-bg); color: var(--blue-text); }
+    .b-green { background: var(--green-bg); color: var(--green-text); }
+    .b-amber { background: var(--amber-bg); color: var(--amber-text); }
+    .b-red { background: var(--red-bg); color: var(--red-text); }
+    .b-teal { background: var(--teal-bg); color: var(--teal-text); }
+    .b-gray { background: var(--gray-bg); color: var(--gray-text); }
+    .pitem { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px; background: var(--bg); }
+    .email-box { background: var(--bg2); border-radius: var(--radius); padding: 16px; font-size: 13px; color: var(--text); line-height: 1.8; border: 0.5px solid var(--border); white-space: pre-wrap; margin-top: 10px; }
+    .log { font-size: 12px; color: var(--text2); font-family: monospace; background: var(--bg2); padding: 10px 14px; border-radius: var(--radius); margin-top: 8px; line-height: 2; display: none; }
+    .log .ok { color: var(--green); } .log .warn { color: #BA7517; } .log .err { color: #E24B4A; }
+    .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pboard { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .pcol-head { font-size: 12px; font-weight: 600; color: var(--text2); padding: 4px 0 8px; border-bottom: 0.5px solid var(--border); margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .pcard { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 9px 11px; margin-bottom: 6px; }
+    .pcard .pc-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .pcard .pc-sub { font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+    .divider { border: none; border-top: 0.5px solid var(--border); margin: 1.2rem 0; }
+    .empty-state { text-align: center; padding: 2.5rem; color: var(--text3); font-size: 13px; }
+    .modal-overlay { background: rgba(0,0,0,.4); border-radius: var(--radius-lg); padding: 20px; display: flex; align-items: center; justify-content: center; min-height: 240px; margin-bottom: 14px; }
+    .modal { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: 100%; max-width: 500px; }
+    .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+    .api-notice { background: var(--amber-bg); color: var(--amber-text); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; margin-bottom: 14px; line-height: 1.6; }
+    .api-notice a { color: var(--amber-text); }
+    @media (max-width: 640px) {
+      .g4 { grid-template-columns: 1fr 1fr; }
+      .g2 { grid-template-columns: 1fr; }
+      .pboard { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 420px) {
+      .g4 { grid-template-columns: 1fr 1fr; }
+      .pboard { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">INO-VR Agent Prospection</div>
+        <div class="brand-sub"><span class="dot"></span> Suisse · Santé · Formation · Industrie</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="sm" onclick="exportCSV()">Export CSV</button>
+      <button class="sm" onclick="exportExcel()">Export Excel</button>
+    </div>
+  </div>
+
+  <div id="api-key-bar" class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="margin:0;white-space:nowrap;font-weight:500">Clé API Anthropic</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1;min-width:200px;margin:0" />
+      <button class="primary" onclick="saveApiKey()">Enregistrer</button>
+      <span id="api-ok" style="font-size:12px;color:var(--green);display:none">Clé enregistrée ✓</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">
+      Clé stockée localement dans votre navigateur uniquement. Obtenez la vôtre sur <a href="https://console.anthropic.com" target="_blank" style="color:var(--text2)">console.anthropic.com</a>
+    </div>
+  </div>
+
+  <div class="g4">
+    <div class="mcard"><div class="ml">Prospects DB</div><div class="mv" id="st-total">0</div><div class="ms">enregistrés</div></div>
+    <div class="mcard"><div class="ml">Emails générés</div><div class="mv" id="st-emails">0</div><div class="ms">cette session</div></div>
+    <div class="mcard"><div class="ml">En pipeline</div><div class="mv" id="st-pipe">0</div><div class="ms">actifs</div></div>
+    <div class="mcard"><div class="ml">Propositions</div><div class="mv" id="st-prop">0</div><div class="ms">en cours</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="goTab('recherche')">Recherche IA</button>
+    <button class="tab" onclick="goTab('email')">Emails</button>
+    <button class="tab" onclick="goTab('pipeline')">Pipeline</button>
+    <button class="tab" onclick="goTab('database')">Base prospects</button>
+    <button class="tab" onclick="goTab('config')">Config</button>
+  </div>
+
+  <!-- RECHERCHE -->
+  <div class="sec active" id="tab-recherche">
+    <div class="card">
+      <div class="g2">
+        <div><label>Secteur cible</label>
+          <select id="r-secteur">
+            <option value="santé">Santé &amp; Médical</option>
+            <option value="formation">Formation professionnelle</option>
+            <option value="industrie">Industrie &amp; Ingénierie</option>
+            <option value="construction">Construction &amp; Architecture</option>
+            <option value="education">Éducation &amp; Universités</option>
+          </select>
+        </div>
+        <div><label>Région</label>
+          <select id="r-region">
+            <option>Genève</option><option>Zurich</option><option>Lausanne</option>
+            <option>Berne</option><option>Bâle</option><option>Toute la Suisse</option>
+          </select>
+        </div>
+      </div>
+      <label>Recherche personnalisée (optionnel)</label>
+      <input type="text" id="r-custom" placeholder="Ex: hôpitaux universitaires formation VR Genève" />
+      <div class="fr">
+        <button class="primary" onclick="lancerRechercheIA()">Recherche IA + web</button>
+        <button onclick="lancerRechercheDemo()">Démo rapide (hors ligne)</button>
+      </div>
+    </div>
+    <div id="log-r" class="log"></div>
+    <div id="res-r"></div>
+  </div>
+
+  <!-- EMAILS -->
+  <div class="sec" id="tab-email">
+    <div class="card">
+      <div class="g2">
+        <div><label>Entreprise cible</label><input type="text" id="e-company" placeholder="Ex: HUG Genève" /></div>
+        <div><label>Contact</label><input type="text" id="e-contact" placeholder="Ex: Dr. Marie Dupont, DRH" /></div>
+      </div>
+      <div class="g2">
+        <div><label>Cas d'usage VR</label>
+          <select id="e-usecase">
+            <option value="simulation chirurgicale et formation médicale immersive">Santé – simulation chirurgicale</option>
+            <option value="formation professionnelle immersive, réduction des coûts et amélioration sécurité">Formation – ROI &amp; sécurité</option>
+            <option value="simulation industrielle, maintenance prédictive et ingénierie VR">Industrie – maintenance VR</option>
+            <option value="visualisation architecturale et co-conception client en MR">Architecture – co-conception MR</option>
+            <option value="apprentissage immersif et laboratoires virtuels">Éducation – labs virtuels</option>
+          </select>
+        </div>
+        <div><label>Ton</label>
+          <select id="e-ton">
+            <option>Professionnel et direct</option>
+            <option>Chaleureux et pédagogique</option>
+            <option>Technique et expert</option>
+            <option>Concis et percutant</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div><label>Langue</label>
+          <select id="e-lang"><option>Français</option><option>Allemand</option><option>Anglais</option><option>Italien</option></select>
+        </div>
+        <div><label>Longueur</label>
+          <select id="e-len">
+            <option value="court (100-130 mots)">Court – accroche rapide</option>
+            <option value="moyen (160-200 mots)" selected>Moyen – standard</option>
+            <option value="long (250-300 mots)">Long – pitch complet</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <button class="primary" onclick="genEmail()">Générer email IA</button>
+        <button onclick="genEmailSuivi()">Email de relance</button>
+      </div>
+    </div>
+    <div id="email-out"></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="sec" id="tab-pipeline">
+    <div class="fr" style="margin-bottom:14px">
+      <button onclick="showAddProspect()">+ Ajouter prospect</button>
+      <button class="sm" onclick="exportPipelineCSV()">Export pipeline CSV</button>
+    </div>
+    <div id="add-prospect-modal" style="display:none;margin-bottom:14px">
+      <div class="modal-overlay">
+        <div class="modal">
+          <h3>Ajouter un prospect manuellement</h3>
+          <div class="g2">
+            <div><label>Entreprise</label><input type="text" id="ap-name" placeholder="Nom" /></div>
+            <div><label>Ville</label><input type="text" id="ap-ville" placeholder="Genève" /></div>
+          </div>
+          <div class="g2">
+            <div><label>Contact</label><input type="text" id="ap-contact" placeholder="Prénom Nom, titre" /></div>
+            <div><label>Secteur</label>
+              <select id="ap-secteur">
+                <option>Santé</option><option>Formation</option><option>Industrie</option><option>Construction</option><option>Éducation</option>
+              </select>
+            </div>
+          </div>
+          <label>Notes</label>
+          <textarea id="ap-notes" placeholder="Contexte, besoins identifiés..."></textarea>
+          <div class="fr">
+            <button class="primary" onclick="addProspectManual()">Ajouter</button>
+            <button onclick="document.getElementById('add-prospect-modal').style.display='none'">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pboard" id="pipeline-board"></div>
+  </div>
+
+  <!-- DATABASE -->
+  <div class="sec" id="tab-database">
+    <div class="fr" style="margin-bottom:14px;align-items:center">
+      <input type="text" id="db-search" placeholder="Rechercher..." style="flex:1;min-width:160px" oninput="renderDB()" />
+      <select id="db-filter-secteur" style="width:auto" onchange="renderDB()">
+        <option value="">Tous secteurs</option>
+        <option>Santé</option><option>Formation</option><option>Industrie</option><option>Construction</option><option>Éducation</option>
+      </select>
+      <select id="db-filter-stage" style="width:auto" onchange="renderDB()">
+        <option value="">Tous statuts</option>
+        <option>Identifié</option><option>Contacté</option><option>En discussion</option><option>Proposition</option>
+      </select>
+      <button class="sm" onclick="clearDB()">Vider DB</button>
+    </div>
+    <div id="db-list"></div>
+    <div id="db-empty" class="empty-state" style="display:none">Aucun prospect en base. Lancez une recherche pour commencer.</div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="sec" id="tab-config">
+    <div class="card">
+      <p style="font-size:14px;font-weight:600;margin-bottom:12px">Paramètres commerciaux</p>
+      <div class="g2">
+        <div><label>Nom expéditeur</label><input type="text" id="cfg-sender" placeholder="Thomas Martin – INO-VR Suisse" /></div>
+        <div><label>Email expéditeur</label><input type="email" id="cfg-email" placeholder="thomas@ino-vr.com" /></div>
+      </div>
+      <div class="g2">
+        <div><label>Produit phare</label>
+          <select id="cfg-product">
+            <option>Casques VR autonomes (Meta Quest Pro, Pico 4)</option>
+            <option>Casques MR haute précision (Varjo XR-4, HoloLens)</option>
+            <option>Solution clés en main + logiciels ArborXR</option>
+            <option>Smart'Case Multi – kit déploiement flotte VR</option>
+            <option>Services Avant-Vente + accompagnement projet</option>
+          </select>
+        </div>
+        <div><label>Langue par défaut</label>
+          <select id="cfg-lang"><option>Français</option><option>Allemand</option><option>Anglais</option><option>Italien</option></select>
+        </div>
+      </div>
+      <label>Accroche personnalisée</label>
+      <textarea id="cfg-accroche" placeholder="Ex: Basés à Carouge (GE), nous accompagnons déjà des entreprises suisses..."></textarea>
+      <div class="fr">
+        <button class="primary" onclick="saveConfig()">Sauvegarder</button>
+        <span id="cfg-ok" style="font-size:12px;color:var(--green);display:none">Sauvegardé ✓</span>
+      </div>
+    </div>
+    <div class="card">
+      <p style="font-size:14px;font-weight:600;margin-bottom:8px">À propos d'INO-VR Suisse</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.7">42 rue de la Filature · 1227 Carouge GE · Distributeur &amp; intégrateur XR professionnel<br>Partenaires : HTC VIVE, Meta, Pico, Varjo, ArborXR, Inversive · <a href="https://www.ino-vr.com" target="_blank" style="color:var(--text2)">www.ino-vr.com</a></p>
+    </div>
+    <div class="card">
+      <p style="font-size:14px;font-weight:600;margin-bottom:8px">Statistiques</p>
+      <div id="cfg-stats" style="font-size:13px;color:var(--text2);line-height:2"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const STAGES=["Identifié","Contacté","En discussion","Proposition"];
+const DB_KEY="inovr_prospects_v2";
+const CFG_KEY="inovr_config_v2";
+const API_KEY_KEY="inovr_api_key";
+let db=[];
+let cfg={sender:"Équipe commerciale – INO-VR Suisse",email:"contact@ino-vr.com",product:"Solution clés en main + logiciels ArborXR",lang:"Français",accroche:""};
+let emailCount=0;
+let apiKey="";
+
+const DEMO={
+  "santé":[
+    {nom:"HUG – Hôpitaux Universitaires de Genève",contact:"Direction formation médicale",ville:"Genève",secteur:"Santé",usage:"Simulation chirurgicale & gestes techniques",score:92,stage:"Identifié",notes:""},
+    {nom:"CHUV – Centre Hospitalier Universitaire Vaudois",contact:"Responsable innovation",ville:"Lausanne",secteur:"Santé",usage:"Rééducation neurologique VR",score:88,stage:"Identifié",notes:""},
+    {nom:"Inselspital Bern",contact:"Dept. formation continue",ville:"Berne",secteur:"Santé",usage:"Formation urgences médicales",score:81,stage:"Identifié",notes:""},
+    {nom:"Swiss Medical Group",contact:"DRH",ville:"Zurich",secteur:"Santé",usage:"Onboarding soignants & prévention",score:76,stage:"Identifié",notes:""},
+  ],
+  "formation":[
+    {nom:"EPFL – Formation continue",contact:"Coordinateur e-learning",ville:"Lausanne",secteur:"Formation",usage:"Modules ingénieurs en VR",score:89,stage:"Identifié",notes:""},
+    {nom:"Ecole hôtelière de Lausanne",contact:"Resp. pédagogique",ville:"Lausanne",secteur:"Formation",usage:"Service & accueil immersif",score:85,stage:"Identifié",notes:""},
+    {nom:"Orif – Intégration professionnelle",contact:"Directeur opérations",ville:"Genève",secteur:"Formation",usage:"Formation inclusive VR",score:79,stage:"Identifié",notes:""},
+  ],
+  "industrie":[
+    {nom:"ABB Schweiz AG",contact:"Resp. HSE & formation",ville:"Zurich",secteur:"Industrie",usage:"Simulation maintenance industrielle",score:91,stage:"Identifié",notes:""},
+    {nom:"Sulzer AG",contact:"Ingénierie & innovation",ville:"Winterthur",secteur:"Industrie",usage:"Prototypage VR avant production",score:86,stage:"Identifié",notes:""},
+    {nom:"Georg Fischer AG",contact:"Dept. R&D",ville:"Schaffhausen",secteur:"Industrie",usage:"Formation opérateurs machines",score:83,stage:"Identifié",notes:""},
+    {nom:"Nestlé Suisse",contact:"Global L&D Manager",ville:"Vevey",secteur:"Industrie",usage:"Formation sécurité usine",score:78,stage:"Identifié",notes:""},
+  ],
+  "construction":[
+    {nom:"Implenia AG",contact:"BIM & Innovation Manager",ville:"Zurich",secteur:"Construction",usage:"Visualisation chantiers MR",score:87,stage:"Identifié",notes:""},
+    {nom:"Losinger Marazzi",contact:"Directeur projet",ville:"Berne",secteur:"Construction",usage:"Co-conception client MR",score:82,stage:"Identifié",notes:""},
+  ],
+  "education":[
+    {nom:"Université de Genève",contact:"Vice-recteur enseignement",ville:"Genève",secteur:"Éducation",usage:"Pédagogie immersive",score:84,stage:"Identifié",notes:""},
+    {nom:"ZHAW – Zürcher Hochschule",contact:"eLearning center",ville:"Zurich",secteur:"Éducation",usage:"Labs virtuels sciences",score:80,stage:"Identifié",notes:""},
+    {nom:"EPFL – Campus Innovation",contact:"Head of EdTech",ville:"Lausanne",secteur:"Éducation",usage:"Expériences pédagogiques VR",score:85,stage:"Identifié",notes:""},
+  ]
+};
+
+function init(){
+  try{ const s=localStorage.getItem(DB_KEY); if(s) db=JSON.parse(s); }catch(e){}
+  try{ const c=localStorage.getItem(CFG_KEY); if(c){ const p=JSON.parse(c); cfg={...cfg,...p}; applyConfig(); } }catch(e){}
+  try{ apiKey=localStorage.getItem(API_KEY_KEY)||""; if(apiKey) document.getElementById("api-key-input").value=apiKey; }catch(e){}
+  updateStats(); renderPipeline(); renderDB();
+}
+
+function saveApiKey(){
+  apiKey=document.getElementById("api-key-input").value.trim();
+  try{ localStorage.setItem(API_KEY_KEY,apiKey); }catch(e){}
+  const ok=document.getElementById("api-ok"); ok.style.display="inline";
+  setTimeout(()=>ok.style.display="none",2000);
+}
+
+function saveDB(){ try{ localStorage.setItem(DB_KEY,JSON.stringify(db)); }catch(e){} updateStats(); }
+function applyConfig(){
+  ["sender","email","accroche"].forEach(k=>{ const el=document.getElementById("cfg-"+k); if(el) el.value=cfg[k]||""; });
+  ["product","lang"].forEach(k=>{ const el=document.getElementById("cfg-"+k); if(el){ for(let o of el.options) if(o.value===cfg[k]||o.text===cfg[k]) o.selected=true; } });
+}
+function saveConfig(){
+  cfg.sender=document.getElementById("cfg-sender").value;
+  cfg.email=document.getElementById("cfg-email").value;
+  cfg.product=document.getElementById("cfg-product").value;
+  cfg.lang=document.getElementById("cfg-lang").value;
+  cfg.accroche=document.getElementById("cfg-accroche").value;
+  try{ localStorage.setItem(CFG_KEY,JSON.stringify(cfg)); }catch(e){}
+  const ok=document.getElementById("cfg-ok"); ok.style.display="inline";
+  setTimeout(()=>ok.style.display="none",2000);
+  renderCfgStats();
+}
+
+function updateStats(){
+  document.getElementById("st-total").textContent=db.length;
+  document.getElementById("st-emails").textContent=emailCount;
+  document.getElementById("st-pipe").textContent=db.filter(p=>p.stage!=="Identifié").length;
+  document.getElementById("st-prop").textContent=db.filter(p=>p.stage==="Proposition").length;
+}
+
+function goTab(t){
+  document.querySelectorAll(".tab").forEach((b,i)=>{
+    const tabs=["recherche","email","pipeline","database","config"];
+    b.classList.toggle("active",tabs[i]===t);
+  });
+  document.querySelectorAll(".sec").forEach(s=>s.classList.remove("active"));
+  document.getElementById("tab-"+t).classList.add("active");
+  if(t==="pipeline") renderPipeline();
+  if(t==="database") renderDB();
+  if(t==="config") renderCfgStats();
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function log(id,msg,cls="info"){
+  const el=document.getElementById(id); if(!el) return;
+  el.style.display="block";
+  el.innerHTML+=`<span class="${cls}">${msg}</span>\n`;
+}
+function clearLog(id){ const el=document.getElementById(id); if(el){el.innerHTML="";el.style.display="none";} }
+
+async function lancerRechercheDemo(){
+  clearLog("log-r"); document.getElementById("res-r").innerHTML="";
+  const secteur=document.getElementById("r-secteur").value;
+  const region=document.getElementById("r-region").value;
+  log("log-r","→ Mode démo – chargement données intégrées...");
+  await sleep(300);
+  log("log-r",`→ Secteur : ${secteur} | Région : ${region}`);
+  await sleep(400);
+  log("log-r","✓ Profil INO-VR Suisse chargé","ok");
+  const raw=(DEMO[secteur]||[]);
+  const result=region==="Toute la Suisse"?raw:raw.filter(p=>p.ville===region);
+  const final=result.length>0?result:raw;
+  await sleep(300);
+  log("log-r",`✓ ${final.length} prospects identifiés`,"ok");
+  renderProspects(final);
+}
+
+async function lancerRechercheIA(){
+  if(!apiKey){ alert("Veuillez entrer votre clé API Anthropic en haut de la page."); return; }
+  clearLog("log-r"); document.getElementById("res-r").innerHTML="";
+  const secteur=document.getElementById("r-secteur").value;
+  const region=document.getElementById("r-region").value;
+  const custom=document.getElementById("r-custom").value;
+  log("log-r","→ Connexion API Claude + recherche web...");
+  await sleep(200);
+  log("log-r",`→ Secteur : ${secteur} | Région : ${region}`);
+  const prompt=`Tu es un expert en prospection B2B pour INO-VR, distributeur et intégrateur de solutions XR (VR/AR/MR) professionnelles basé à Carouge, Suisse (www.ino-vr.com).
+Identifie 5 organisations réelles en Suisse dans le secteur "${secteur}" région "${region}" qui seraient des prospects pertinents pour des solutions VR/XR professionnelles.
+${custom?"Requête supplémentaire : "+custom:""}
+Retourne UNIQUEMENT un JSON valide, sans texte avant ou après, sans backticks:
+{"prospects":[{"nom":"...","contact":"...","ville":"...","secteur":"...","usage":"...","score":85,"notes":"..."}]}
+- nom: nom réel de l'organisation
+- contact: titre/département à cibler
+- ville: ville en Suisse
+- secteur: Santé/Formation/Industrie/Construction/Éducation
+- usage: cas d'usage VR concret (15 mots max)
+- score: pertinence 0-100
+- notes: 1 phrase sur la pertinence VR`;
+  try{
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-opus-4-5",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+    });
+    if(!resp.ok){ throw new Error("API error "+resp.status); }
+    const data=await resp.json();
+    log("log-r","✓ Réponse reçue","ok");
+    const text=(data.content||[]).map(b=>b.text||"").join("").trim();
+    let prospects=[];
+    try{
+      const clean=text.replace(/```json|```/g,"").trim();
+      prospects=JSON.parse(clean).prospects||[];
+    }catch(e){
+      log("log-r","⚠ Fallback données démo","warn");
+      prospects=(DEMO[secteur]||[]).slice(0,5);
+    }
+    log("log-r",`✓ ${prospects.length} prospects identifiés`,"ok");
+    renderProspects(prospects);
+  }catch(e){
+    log("log-r","✗ Erreur – basculement démo : "+e.message,"err");
+    lancerRechercheDemo();
+  }
+}
+
+function renderProspects(list){
+  const cont=document.getElementById("res-r");
+  cont.innerHTML="";
+  list.forEach(p=>{
+    const sc=p.score>=85?"b-green":p.score>=70?"b-amber":"b-gray";
+    const already=db.find(d=>d.nom===p.nom);
+    const ps=JSON.stringify(p).replace(/"/g,'&quot;');
+    cont.innerHTML+=`<div class="pitem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;margin-bottom:2px">${p.nom}</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${p.contact||""} · ${p.ville||""}</div>
+          <span class="badge b-blue">${p.usage||""}</span>
+          ${p.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px">${p.notes}</div>`:""}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="badge ${sc}">Score ${p.score}/100</span>
+          <div style="display:flex;gap:5px;margin-top:8px;justify-content:flex-end">
+            <button class="sm" onclick="prefillEmail('${esc2(p.nom)}','${esc2(p.contact||"")}')">Email</button>
+            ${already?`<span class="badge b-teal">En DB</span>`:`<button class="sm" onclick='saveToDb(JSON.parse(this.dataset.p))' data-p="${ps}">+ DB</button>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+function prefillEmail(nom,contact){
+  document.getElementById("e-company").value=nom;
+  document.getElementById("e-contact").value=contact;
+  goTab("email");
+}
+
+function saveToDb(p){
+  if(!db.find(d=>d.nom===p.nom)){
+    db.push({...p,stage:"Identifié",notes:p.notes||"",addedAt:new Date().toISOString()});
+    saveDB(); renderDB(); renderPipeline();
+  }
+}
+
+async function callClaude(prompt,maxTokens=800){
+  if(!apiKey) throw new Error("Pas de clé API");
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-opus-4-5",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+  });
+  if(!resp.ok) throw new Error("API "+resp.status);
+  const data=await resp.json();
+  return (data.content||[]).map(b=>b.text||"").join("");
+}
+
+async function genEmail(){
+  if(!apiKey){ alert("Clé API requise."); return; }
+  const company=document.getElementById("e-company").value||"votre organisation";
+  const contact=document.getElementById("e-contact").value;
+  const usecase=document.getElementById("e-usecase").value;
+  const ton=document.getElementById("e-ton").value;
+  const lang=document.getElementById("e-lang").value;
+  const len=document.getElementById("e-len").value;
+  const out=document.getElementById("email-out");
+  out.innerHTML=`<div style="font-size:13px;color:var(--text2);padding:8px 0"><span class="spin"></span>Génération en cours...</div>`;
+  try{
+    const text=await callClaude(`Tu es un expert prospection B2B pour INO-VR, distributeur intégrateur XR basé à Carouge, Suisse (www.ino-vr.com).
+Rédige un email de prospection ${ton.toLowerCase()}, longueur ${len}, en ${lang} pour ${company}${contact?", à l'attention de "+contact:""}.
+Cas d'usage VR : ${usecase}. Produit : ${cfg.product}. Expéditeur : ${cfg.sender}${cfg.email?" <"+cfg.email+">":""}.
+${cfg.accroche?"Accroche : "+cfg.accroche:""}
+INO-VR : conseil, matériel, logiciel, déploiement flotte, SAV. Présence France & Suisse.
+Format : ligne "Objet: ..." puis corps de l'email. Aucun commentaire.`);
+    emailCount++; updateStats();
+    out.innerHTML=`<div class="email-box">${esc(text)}</div>
+      <div class="fr" style="margin-top:8px">
+        <button class="sm" onclick="copyEmail()">Copier</button>
+        <button class="sm" onclick="markSent('${esc2(company)}')">Marquer envoyé</button>
+      </div>`;
+  }catch(e){ out.innerHTML=`<p style="font-size:13px;color:var(--text2)">Erreur : ${e.message}</p>`; }
+}
+
+async function genEmailSuivi(){
+  if(!apiKey){ alert("Clé API requise."); return; }
+  const company=document.getElementById("e-company").value||"votre organisation";
+  const out=document.getElementById("email-out");
+  out.innerHTML=`<div style="font-size:13px;color:var(--text2);padding:8px 0"><span class="spin"></span>Génération relance...</div>`;
+  try{
+    const text=await callClaude(`Email de relance court (80-100 mots) en ${cfg.lang} pour ${company}, de la part de ${cfg.sender} (INO-VR Suisse, solutions VR pro). Pas de réponse au 1er email. Ton chaleureux. Commence par "Objet:".`,400);
+    emailCount++; updateStats();
+    out.innerHTML=`<div class="email-box">${esc(text)}</div><div class="fr" style="margin-top:8px"><button class="sm" onclick="copyEmail()">Copier</button></div>`;
+  }catch(e){ out.innerHTML=`<p style="font-size:13px;color:var(--text2)">Erreur : ${e.message}</p>`; }
+}
+
+function copyEmail(){
+  const el=document.querySelector(".email-box");
+  if(el) navigator.clipboard.writeText(el.textContent).then(()=>{
+    const btn=document.querySelector(".fr .sm");
+    if(btn){ const orig=btn.textContent; btn.textContent="Copié ✓"; setTimeout(()=>btn.textContent=orig,2000); }
+  });
+}
+
+function markSent(nom){
+  const p=db.find(d=>d.nom===nom);
+  if(p&&p.stage==="Identifié"){ p.stage="Contacté"; saveDB(); renderPipeline(); }
+}
+
+function renderPipeline(){
+  const board=document.getElementById("pipeline-board");
+  board.innerHTML=STAGES.map(stage=>`
+    <div>
+      <div class="pcol-head"><span>${stage}</span><span>${db.filter(p=>p.stage===stage).length}</span></div>
+      ${db.filter(p=>p.stage===stage).map(p=>{
+        const idx=db.indexOf(p);
+        const stageIdx=STAGES.indexOf(stage);
+        const btns=STAGES.filter((_,i)=>i!==stageIdx).map(s=>`<button class="sm" style="font-size:10px;padding:2px 6px" onclick="moveStage(${idx},'${s}')">${s}</button>`).join('');
+        return `<div class="pcard">
+          <div class="pc-name">${p.nom}</div>
+          <div class="pc-sub">${p.ville||""} · ${p.secteur||""}</div>
+          <div style="margin-bottom:5px"><span class="badge b-gray" style="font-size:10px">${p.contact||"–"}</span></div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">${btns}</div>
+          <div style="margin-top:5px;display:flex;gap:3px">
+            <button class="sm" style="font-size:10px;padding:2px 6px" onclick="prefillEmail('${esc2(p.nom)}','${esc2(p.contact||"")}')">Email</button>
+            <button class="sm" style="font-size:10px;padding:2px 6px;color:var(--red-text)" onclick="removeProspect(${idx})">✕</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+function moveStage(idx,stage){ db[idx].stage=stage; saveDB(); renderPipeline(); updateStats(); }
+function removeProspect(idx){ db.splice(idx,1); saveDB(); renderPipeline(); updateStats(); }
+
+function showAddProspect(){
+  const m=document.getElementById("add-prospect-modal");
+  m.style.display=m.style.display==="none"?"block":"none";
+}
+
+function addProspectManual(){
+  const nom=document.getElementById("ap-name").value.trim();
+  if(!nom) return;
+  db.push({nom,ville:document.getElementById("ap-ville").value.trim(),contact:document.getElementById("ap-contact").value.trim(),secteur:document.getElementById("ap-secteur").value,usage:"",score:70,stage:"Identifié",notes:document.getElementById("ap-notes").value.trim(),addedAt:new Date().toISOString()});
+  saveDB();
+  document.getElementById("add-prospect-modal").style.display="none";
+  ["ap-name","ap-ville","ap-contact","ap-notes"].forEach(id=>document.getElementById(id).value="");
+  renderPipeline(); renderDB(); updateStats();
+}
+
+function renderDB(){
+  const q=(document.getElementById("db-search").value||"").toLowerCase();
+  const sf=document.getElementById("db-filter-secteur").value;
+  const stf=document.getElementById("db-filter-stage").value;
+  const list=db.filter(p=>{
+    const matchQ=!q||(p.nom+p.contact+p.ville+p.secteur+p.notes).toLowerCase().includes(q);
+    return matchQ&&(!sf||p.secteur===sf)&&(!stf||p.stage===stf);
+  });
+  const cont=document.getElementById("db-list");
+  const empty=document.getElementById("db-empty");
+  if(!list.length){ cont.innerHTML=""; empty.style.display="block"; return; }
+  empty.style.display="none";
+  cont.innerHTML=list.map(p=>{
+    const idx=db.indexOf(p);
+    const sc=p.score>=85?"b-green":p.score>=70?"b-amber":"b-gray";
+    const stgC=p.stage==="Proposition"?"b-green":p.stage==="En discussion"?"b-blue":p.stage==="Contacté"?"b-amber":"b-gray";
+    return `<div class="pitem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;margin-bottom:2px">${p.nom}</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${p.contact||"–"} · ${p.ville||"–"} · ${p.secteur||"–"}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <span class="badge ${stgC}">${p.stage}</span>
+            <span class="badge ${sc}">Score ${p.score}/100</span>
+            ${p.usage?`<span class="badge b-blue" style="font-size:10px">${p.usage}</span>`:""}
+          </div>
+          ${p.notes?`<div style="font-size:11px;color:var(--text3);margin-top:4px">${p.notes}</div>`:""}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="sm" onclick="prefillEmail('${esc2(p.nom)}','${esc2(p.contact||"")}')">Email</button>
+          <button class="sm" style="color:var(--red-text)" onclick="removeProspect(${idx});renderDB()">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearDB(){
+  if(confirm("Vider toute la base ? Action irréversible."))
+  { db=[]; saveDB(); renderDB(); renderPipeline(); updateStats(); }
+}
+
+function renderCfgStats(){
+  const el=document.getElementById("cfg-stats"); if(!el) return;
+  const byS={};
+  db.forEach(p=>{byS[p.secteur]=(byS[p.secteur]||0)+1;});
+  el.innerHTML=`Total prospects : <strong>${db.length}</strong> · Emails cette session : <strong>${emailCount}</strong><br>${Object.entries(byS).map(([k,v])=>`${k} : ${v}`).join(" · ")||"–"}`;
+}
+
+function getExportData(){
+  return db.map(p=>({"Entreprise":p.nom||"","Contact":p.contact||"","Ville":p.ville||"","Secteur":p.secteur||"","Usage VR":p.usage||"","Score":p.score||0,"Statut":p.stage||"","Notes":p.notes||"","Ajouté le":p.addedAt?new Date(p.addedAt).toLocaleDateString("fr-CH"):""}));
+}
+
+function exportCSV(){
+  const rows=getExportData();
+  if(!rows.length){alert("Aucun prospect à exporter.");return;}
+  const h=Object.keys(rows[0]);
+  const csv=[h.join(";"),...rows.map(r=>h.map(k=>`"${(r[k]||"").toString().replace(/"/g,'""')}"`).join(";"))].join("\n");
+  dl("\uFEFF"+csv,"text/csv","prospects_inovr_suisse.csv");
+}
+
+function exportExcel(){
+  if(!window.XLSX){alert("XLSX non chargé.");return;}
+  const rows=getExportData();
+  if(!rows.length){alert("Aucun prospect à exporter.");return;}
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws["!cols"]=[{wch:35},{wch:25},{wch:15},{wch:14},{wch:35},{wch:7},{wch:16},{wch:40},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,"Prospects");
+  const ws2=XLSX.utils.aoa_to_sheet([["INO-VR Agent Prospection Suisse"],[""],["Total",db.length],["Emails",emailCount],["En pipeline",db.filter(p=>p.stage!=="Identifié").length],["Propositions",db.filter(p=>p.stage==="Proposition").length],[""],["Généré le",new Date().toLocaleDateString("fr-CH")]]);
+  XLSX.utils.book_append_sheet(wb,ws2,"Résumé");
+  XLSX.writeFile(wb,"prospects_inovr_suisse.xlsx");
+}
+
+function exportPipelineCSV(){
+  const rows=db.filter(p=>p.stage!=="Identifié");
+  if(!rows.length){alert("Aucun prospect actif dans le pipeline.");return;}
+  const h=["Entreprise","Contact","Ville","Secteur","Statut","Notes"];
+  const csv=[h.join(";"),...rows.map(p=>[p.nom,p.contact,p.ville,p.secteur,p.stage,p.notes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(";"))].join("\n");
+  dl("\uFEFF"+csv,"text/csv","pipeline_inovr.csv");
+}
+
+function dl(content,type,filename){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+function esc2(s){ return (s||"").replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
+
+init();
+</script>
+</body>
+</html>
