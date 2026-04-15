@@ -181,8 +181,21 @@
           </select>
         </div>
       </div>
-      <label>Recherche personnalisée (optionnel)</label>
-      <input type="text" id="r-custom" placeholder="Ex: hôpitaux universitaires formation VR Genève" />
+      <div class="g2">
+        <div>
+          <label>Recherche personnalisée (optionnel)</label>
+          <input type="text" id="r-custom" placeholder="Ex: hôpitaux universitaires formation VR Genève" />
+        </div>
+        <div>
+          <label>Nombre de prospects à trouver</label>
+          <select id="r-count">
+            <option value="5">5 prospects</option>
+            <option value="10" selected>10 prospects</option>
+            <option value="15">15 prospects</option>
+            <option value="20">20 prospects</option>
+          </select>
+        </div>
+      </div>
       <div class="fr">
         <button class="primary" onclick="lancerRechercheIA()">Recherche IA + web</button>
         <button onclick="lancerRechercheDemo()">Démo rapide (hors ligne)</button>
@@ -453,10 +466,16 @@ async function lancerRechercheIA(){
   const custom=document.getElementById("r-custom").value;
   log("log-r","→ Connexion API Claude + recherche web...");
   await sleep(200);
-  log("log-r",`→ Secteur : ${secteur} | Région : ${region}`);
+  const count=parseInt(document.getElementById("r-count").value)||10;
+  const existingNames=db.map(p=>p.nom);
+  const existingBlock=existingNames.length>0
+    ? `\nATTENTION : Ces organisations sont déjà dans notre base de données, NE LES INCLUS PAS dans ta réponse :\n${existingNames.map(n=>`- ${n}`).join("\n")}\n`
+    : "";
+  if(existingNames.length>0) log("log-r",`→ ${existingNames.length} prospect(s) déjà en DB — exclus de la recherche`,"warn");
+  log("log-r",`→ Secteur : ${secteur} | Région : ${region} | Objectif : ${count} nouveaux prospects`);
   const prompt=`Tu es un expert en prospection B2B pour INO-VR, distributeur et intégrateur de solutions XR (VR/AR/MR) professionnelles basé à Carouge, Suisse (www.ino-vr.com).
-Identifie 5 organisations réelles en Suisse dans le secteur "${secteur}" région "${region}" qui seraient des prospects pertinents pour des solutions VR/XR professionnelles.
-${custom?"Requête supplémentaire : "+custom:""}
+Identifie ${count} organisations réelles en Suisse dans le secteur "${secteur}" région "${region}" qui seraient des prospects pertinents pour des solutions VR/XR professionnelles.
+${existingBlock}${custom?"Requête supplémentaire : "+custom:""}
 Retourne UNIQUEMENT un JSON valide, sans texte avant ou après, sans backticks:
 {"prospects":[{"nom":"...","contact":"...","ville":"...","secteur":"...","usage":"...","score":85,"notes":"..."}]}
 - nom: nom réel de l'organisation
@@ -470,7 +489,7 @@ Retourne UNIQUEMENT un JSON valide, sans texte avant ou après, sans backticks:
     const resp=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-opus-4-5",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+      body:JSON.stringify({model:"claude-opus-4-5",max_tokens:4000,messages:[{role:"user",content:prompt}]})
     });
     if(!resp.ok){ throw new Error("API error "+resp.status); }
     const data=await resp.json();
@@ -484,7 +503,15 @@ Retourne UNIQUEMENT un JSON valide, sans texte avant ou après, sans backticks:
       log("log-r","⚠ Fallback données démo","warn");
       prospects=(DEMO[secteur]||[]).slice(0,5);
     }
-    log("log-r",`✓ ${prospects.length} prospects identifiés`,"ok");
+    const dbNamesLower=db.map(p=>p.nom.toLowerCase().trim());
+    const before=prospects.length;
+    prospects=prospects.filter(p=>!dbNamesLower.includes(p.nom.toLowerCase().trim()));
+    const dupes=before-prospects.length;
+    if(dupes>0) log("log-r",`→ ${dupes} doublon(s) supprimé(s) côté client`,"warn");
+    log("log-r",`✓ ${prospects.length} nouveaux prospects trouvés`,"ok");
+    if(prospects.length===0){
+      log("log-r","⚠ Tous les résultats sont déjà en base. Essayez une autre région ou un autre secteur.","warn");
+    }
     renderProspects(prospects);
   }catch(e){
     log("log-r","✗ Erreur – basculement démo : "+e.message,"err");
