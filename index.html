@@ -379,10 +379,6 @@ function init(){
   try{ const c=localStorage.getItem(CFG_KEY); if(c){ const p=JSON.parse(c); cfg={...cfg,...p}; applyConfig(); } }catch(e){}
   updateStats(); renderPipeline(); renderDB();
 }
-catch(e){}
-  const ok=document.getElementById("api-ok"); ok.style.display="inline";
-  setTimeout(()=>ok.style.display="none",2000);
-}
 
 function saveDB(){ try{ localStorage.setItem(DB_KEY,JSON.stringify(db)); }catch(e){} updateStats(); }
 function applyConfig(){
@@ -554,6 +550,7 @@ async function callClaude(prompt,maxTokens=800){
   const data=await resp.json();
   return (data.content||[]).map(b=>b.text||"").join("");
 }
+
 async function genEmail(){
   const company=document.getElementById("e-company").value||"votre organisation";
   const contact=document.getElementById("e-contact").value;
