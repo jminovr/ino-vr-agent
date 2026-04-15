@@ -134,13 +134,6 @@
     </div>
   </div>
 
-  <div id="api-key-bar" class="card" style="margin-bottom:14px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <label style="margin:0;white-space:nowrap;font-weight:500">Clé API Anthropic</label>
-      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1;min-width:200px;margin:0" />
-      <button class="primary" onclick="saveApiKey()">Enregistrer</button>
-      <span id="api-ok" style="font-size:12px;color:var(--green);display:none">Clé enregistrée ✓</span>
-    </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px">
       Clé stockée localement dans votre navigateur uniquement. Obtenez la vôtre sur <a href="https://console.anthropic.com" target="_blank" style="color:var(--text2)">console.anthropic.com</a>
     </div>
@@ -348,11 +341,9 @@
 const STAGES=["Identifié","Contacté","En discussion","Proposition"];
 const DB_KEY="inovr_prospects_v2";
 const CFG_KEY="inovr_config_v2";
-const API_KEY_KEY="inovr_api_key";
 let db=[];
 let cfg={sender:"Équipe commerciale – INO-VR Suisse",email:"contact@ino-vr.com",product:"Solution clés en main + logiciels ArborXR",lang:"Français",accroche:""};
 let emailCount=0;
-let apiKey="";
 
 const DEMO={
   "santé":[
@@ -386,13 +377,9 @@ const DEMO={
 function init(){
   try{ const s=localStorage.getItem(DB_KEY); if(s) db=JSON.parse(s); }catch(e){}
   try{ const c=localStorage.getItem(CFG_KEY); if(c){ const p=JSON.parse(c); cfg={...cfg,...p}; applyConfig(); } }catch(e){}
-  try{ apiKey=localStorage.getItem(API_KEY_KEY)||""; if(apiKey) document.getElementById("api-key-input").value=apiKey; }catch(e){}
   updateStats(); renderPipeline(); renderDB();
 }
-
-function saveApiKey(){
-  apiKey=document.getElementById("api-key-input").value.trim();
-  try{ localStorage.setItem(API_KEY_KEY,apiKey); }catch(e){}
+catch(e){}
   const ok=document.getElementById("api-ok"); ok.style.display="inline";
   setTimeout(()=>ok.style.display="none",2000);
 }
@@ -459,7 +446,6 @@ async function lancerRechercheDemo(){
 }
 
 async function lancerRechercheIA(){
-  if(!apiKey){ alert("Veuillez entrer votre clé API Anthropic en haut de la page."); return; }
   clearLog("log-r"); document.getElementById("res-r").innerHTML="";
   const secteur=document.getElementById("r-secteur").value;
   const region=document.getElementById("r-region").value;
@@ -486,9 +472,9 @@ Retourne UNIQUEMENT un JSON valide, sans texte avant ou après, sans backticks:
 - score: pertinence 0-100
 - notes: 1 phrase sur la pertinence VR`;
   try{
-    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    const resp=await fetch("/.netlify/functions/claude-proxy",{
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({model:"claude-opus-4-5",max_tokens:4000,messages:[{role:"user",content:prompt}]})
     });
     if(!resp.ok){ throw new Error("API error "+resp.status); }
@@ -560,11 +546,14 @@ function saveToDb(p){
 }
 
 async function callClaude(prompt,maxTokens=800){
-  if(!apiKey) throw new Error("Pas de clé API");
-  const resp=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+  const resp=await fetch("/.netlify/functions/claude-proxy",{
+    method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({model:"claude-opus-4-5",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+  });
+  if(!resp.ok) throw new Error("API "+resp.status);
+  const data=await resp.json();
+  return (data.content||[]).map(b=>b.text||"").join("");
+}]})
   });
   if(!resp.ok) throw new Error("API "+resp.status);
   const data=await resp.json();
@@ -572,7 +561,6 @@ async function callClaude(prompt,maxTokens=800){
 }
 
 async function genEmail(){
-  if(!apiKey){ alert("Clé API requise."); return; }
   const company=document.getElementById("e-company").value||"votre organisation";
   const contact=document.getElementById("e-contact").value;
   const usecase=document.getElementById("e-usecase").value;
@@ -598,7 +586,6 @@ Format : ligne "Objet: ..." puis corps de l'email. Aucun commentaire.`);
 }
 
 async function genEmailSuivi(){
-  if(!apiKey){ alert("Clé API requise."); return; }
   const company=document.getElementById("e-company").value||"votre organisation";
   const out=document.getElementById("email-out");
   out.innerHTML=`<div style="font-size:13px;color:var(--text2);padding:8px 0"><span class="spin"></span>Génération relance...</div>`;
