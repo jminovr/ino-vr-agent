@@ -553,13 +553,7 @@ async function callClaude(prompt,maxTokens=800){
   if(!resp.ok) throw new Error("API "+resp.status);
   const data=await resp.json();
   return (data.content||[]).map(b=>b.text||"").join("");
-}]})
-  });
-  if(!resp.ok) throw new Error("API "+resp.status);
-  const data=await resp.json();
-  return (data.content||[]).map(b=>b.text||"").join("");
 }
-
 async function genEmail(){
   const company=document.getElementById("e-company").value||"votre organisation";
   const contact=document.getElementById("e-contact").value;
